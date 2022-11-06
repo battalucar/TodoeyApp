@@ -10,11 +10,20 @@ import CoreData
 
 class ItemViewController: UITableViewController {
     
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     var itemArray = [Item]()
     
+    var selectedCategory: Category? {
+        didSet {
+            loadItems()
+        }
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        searchBar.delegate = self
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
@@ -41,7 +50,7 @@ class ItemViewController: UITableViewController {
         } else {
             cell.textLabel?.text = item.title
         }
-
+        
         cell.accessoryType = item.done ? .checkmark : .none
         
         return cell
@@ -50,13 +59,6 @@ class ItemViewController: UITableViewController {
     // MARK: - Tableview delegate
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
-        // Update data from CoreData
-        // itemArray[indexPath.row].setValue("Completed", forKey: "title")
-        
-        // Remove data from CoreData
-        // context.delete(itemArray[indexPath.row])
-        // itemArray.remove(at: indexPath.row)
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
@@ -76,6 +78,7 @@ class ItemViewController: UITableViewController {
             let newItem = Item(context: self.context)
             newItem.title = textField.text!
             newItem.done = false
+            newItem.parentCategory = self.selectedCategory
             self.itemArray.append(newItem)
             
             self.saveItems()
@@ -95,6 +98,8 @@ class ItemViewController: UITableViewController {
         self.present(alert, animated: true, completion: nil)
     }
     
+    // MARK: - Data manipulation
+    
     func saveItems() {
         do {
             try context.save()
@@ -105,15 +110,58 @@ class ItemViewController: UITableViewController {
         self.tableView.reloadData()
     }
     
-    func loadItems() {
-        let request: NSFetchRequest<Item> = Item.fetchRequest()
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), searchPredicate: NSPredicate? = nil) {
+        
+        let predicate = NSPredicate(format: "parentCategory.name MATCHES[cd] %@", selectedCategory!.name!)
+        
+        if let searchPredicate = searchPredicate {
+            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, searchPredicate])
+            request.predicate = compoundPredicate
+        } else {
+            request.predicate = predicate
+        }
         
         do {
             itemArray = try context.fetch(request)
         } catch {
             print("Error fetching data from context. \(error)")
         }
+        
+        tableView.reloadData()
     }
     
+}
+
+// MARK: - Search bar
+
+extension ItemViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request: NSFetchRequest<Item> = Item.fetchRequest()
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItems(with: request, searchPredicate: predicate)
+    }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        loadItems()
+        searchBar.resignFirstResponder()
+        searchBar.text = ""
+    }
+    
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.showsCancelButton = true
+        UIView.animate(withDuration: 0.1) {
+            searchBar.layoutIfNeeded()
+        }
+    }
+    
+    func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
+        searchBar.showsCancelButton = false
+        UIView.animate(withDuration: 0.1) {
+            searchBar.layoutIfNeeded()
+        }
+    }
 }
 

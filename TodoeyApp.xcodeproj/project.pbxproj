@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		E58F7C912917C15900107E51 /* CategoryViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E58F7C902917C15900107E51 /* CategoryViewController.swift */; };
 		E5DB6AA5290E7CF500844948 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5DB6AA4290E7CF500844948 /* AppDelegate.swift */; };
 		E5DB6AA7290E7CF500844948 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5DB6AA6290E7CF500844948 /* SceneDelegate.swift */; };
 		E5DB6AA9290E7CF500844948 /* ItemViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5DB6AA8290E7CF500844948 /* ItemViewController.swift */; };
@@ -17,6 +18,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		E58F7C902917C15900107E51 /* CategoryViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryViewController.swift; sourceTree = "<group>"; };
 		E5DB6AA1290E7CF500844948 /* TodoeyApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TodoeyApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E5DB6AA4290E7CF500844948 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		E5DB6AA6290E7CF500844948 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -82,6 +84,7 @@
 		E5DB6ABC290E7D4B00844948 /* Controller */ = {
 			isa = PBXGroup;
 			children = (
+				E58F7C902917C15900107E51 /* CategoryViewController.swift */,
 				E5DB6AA8290E7CF500844948 /* ItemViewController.swift */,
 			);
 			path = Controller;
@@ -165,6 +168,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E58F7C912917C15900107E51 /* CategoryViewController.swift in Sources */,
 				E5DB6AA9290E7CF500844948 /* ItemViewController.swift in Sources */,
 				E5DB6AA5290E7CF500844948 /* AppDelegate.swift in Sources */,
 				E5DB6AA7290E7CF500844948 /* SceneDelegate.swift in Sources */,
