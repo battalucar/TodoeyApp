@@ -6,14 +6,14 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class ItemViewController: UITableViewController {
     
     @IBOutlet weak var searchBar: UISearchBar!
     
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
-    var itemArray = [Item]()
+    var itemArray: Results<Item>?
+    let realm = try! Realm()
     
     var selectedCategory: Category? {
         didSet {
@@ -23,7 +23,7 @@ class ItemViewController: UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        searchBar.delegate = self
+        //        searchBar.delegate = self
         
         print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
@@ -31,27 +31,37 @@ class ItemViewController: UITableViewController {
     }
     
     // MARK: - Tableview data source
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return itemArray.count
+        return itemArray?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let item = itemArray[indexPath.row]
         let cell = tableView.dequeueReusableCell(withIdentifier: "ItemCell", for: indexPath)
         
-        if #available(iOS 14.0, *) {
-            var content = cell.defaultContentConfiguration()
-            content.text = item.title
-            cell.contentConfiguration = content
+        if let item = itemArray?[indexPath.row] {
+            if #available(iOS 14.0, *) {
+                var content = cell.defaultContentConfiguration()
+                content.text = item.title
+                cell.contentConfiguration = content
+            } else {
+                cell.textLabel?.text = item.title
+            }
+            
+            cell.accessoryType = item.done ? .checkmark : .none
         } else {
-            cell.textLabel?.text = item.title
+            if #available(iOS 14.0, *) {
+                var content = cell.defaultContentConfiguration()
+                content.text = "No items added yet"
+                cell.contentConfiguration = content
+            } else {
+                cell.textLabel?.text = "No items added yet"
+            }
         }
-        
-        cell.accessoryType = item.done ? .checkmark : .none
         
         return cell
     }
@@ -60,10 +70,18 @@ class ItemViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+        if let item = itemArray?[indexPath.row] {
+            do {
+                try realm.write {
+//                    realm.delete(item)
+                    item.done = !item.done
+                }
+            } catch {
+                print("Error saving done status. \(error)")
+            }
+        }
         
-        saveItems()
-        
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
@@ -74,18 +92,24 @@ class ItemViewController: UITableViewController {
         
         let alert = UIAlertController(title: "Add New Item", message: "", preferredStyle: .alert)
         
-        let addAction = UIAlertAction(title: "Add", style: .default) { action in
-            let newItem = Item(context: self.context)
-            newItem.title = textField.text!
-            newItem.done = false
-            newItem.parentCategory = self.selectedCategory
-            self.itemArray.append(newItem)
-            
-            self.saveItems()
-            
-        }
-        
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
+        
+        let addAction = UIAlertAction(title: "Add", style: .default) { action in
+            
+            if let currentCategory = self.selectedCategory {
+                do {
+                    try self.realm.write {
+                        let newItem = Item()
+                        newItem.title = textField.text!
+                        newItem.dateCreated = Date.now
+                        currentCategory.items.append(newItem)
+                        self.tableView.reloadData()
+                    }
+                } catch {
+                    print("Error saving item. \(error)")
+                }
+            }
+        }
         
         alert.addTextField { alertTextField in
             alertTextField.placeholder = "Create new item"
@@ -100,33 +124,19 @@ class ItemViewController: UITableViewController {
     
     // MARK: - Data manipulation
     
-    func saveItems() {
+    func save(item: Item) {
         do {
-            try context.save()
+            try realm.write {
+                realm.add(item)
+            }
         } catch {
-            print("Error saving context. \(error)")
+            print("Error saving item. \(error)")
         }
-        
         self.tableView.reloadData()
     }
     
-    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest(), searchPredicate: NSPredicate? = nil) {
-        
-        let predicate = NSPredicate(format: "parentCategory.name MATCHES[cd] %@", selectedCategory!.name!)
-        
-        if let searchPredicate = searchPredicate {
-            let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [predicate, searchPredicate])
-            request.predicate = compoundPredicate
-        } else {
-            request.predicate = predicate
-        }
-        
-        do {
-            itemArray = try context.fetch(request)
-        } catch {
-            print("Error fetching data from context. \(error)")
-        }
-        
+    func loadItems() {
+        itemArray = selectedCategory?.items.sorted(byKeyPath: "dateCreated", ascending: false)
         tableView.reloadData()
     }
     
@@ -136,27 +146,30 @@ class ItemViewController: UITableViewController {
 
 extension ItemViewController: UISearchBarDelegate {
     
-    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
-        let request: NSFetchRequest<Item> = Item.fetchRequest()
-        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
-        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
-        
-        loadItems(with: request, searchPredicate: predicate)
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchText.isEmpty {
+            loadItems()
+        }
     }
-    
+
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        itemArray = itemArray?.filter("title CONTAINS[cd] %@", searchBar.text!).sorted(byKeyPath: "title", ascending: true)
+        tableView.reloadData()
+    }
+
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         loadItems()
         searchBar.resignFirstResponder()
         searchBar.text = ""
     }
-    
+
     func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
         searchBar.showsCancelButton = true
         UIView.animate(withDuration: 0.1) {
             searchBar.layoutIfNeeded()
         }
     }
-    
+
     func searchBarTextDidEndEditing(_ searchBar: UISearchBar) {
         searchBar.showsCancelButton = false
         UIView.animate(withDuration: 0.1) {
