@@ -6,35 +6,36 @@
 //
 
 import UIKit
-import CoreData
+import SwipeCellKit
 import RealmSwift
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
     
     let realm = try! Realm()
     
     var categoryArray: Results<Category>?
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.rowHeight = 65.0
         
         loadCategories()
-
+        
     }
-
+    
     // MARK: - Table view data source
-
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return categoryArray?.count ?? 1
     }
-
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let category = categoryArray?[indexPath.row]
-        let cell = tableView.dequeueReusableCell(withIdentifier: "categoryCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if #available(iOS 14.0, *) {
             var content = cell.defaultContentConfiguration()
@@ -92,6 +93,7 @@ class CategoryViewController: UITableViewController {
     // MARK: - Data manipulation
     
     func save(category: Category) {
+        
         do {
             try realm.write {
                 realm.add(category)
@@ -101,13 +103,30 @@ class CategoryViewController: UITableViewController {
         }
         
         self.tableView.reloadData()
-    } 
+    }
     
     func loadCategories() {
         
         categoryArray = realm.objects(Category.self)
         
         tableView.reloadData()
+    }
+    
+    // MARK: - Delete from Swipe
+    
+    override func updateModel(at indexPath: IndexPath) {
+//        super.updateModel(at: indexPath)
+        
+        if let item = self.categoryArray?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(item)
+                }
+            } catch {
+                print("Error deleting item. \(error)")
+            }
+        }
+        
     }
     
 }

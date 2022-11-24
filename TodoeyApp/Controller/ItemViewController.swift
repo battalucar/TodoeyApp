@@ -8,7 +8,7 @@
 import UIKit
 import RealmSwift
 
-class ItemViewController: UITableViewController {
+class ItemViewController: SwipeTableViewController {
     
     @IBOutlet weak var searchBar: UISearchBar!
     
@@ -41,7 +41,7 @@ class ItemViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if let item = itemArray?[indexPath.row] {
             if #available(iOS 14.0, *) {
@@ -138,6 +138,18 @@ class ItemViewController: UITableViewController {
     func loadItems() {
         itemArray = selectedCategory?.items.sorted(byKeyPath: "dateCreated", ascending: false)
         tableView.reloadData()
+    }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let item = self.itemArray?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(item)
+                }
+            } catch {
+                print("Error deleting item. \(error)")
+            }
+        }
     }
     
 }
